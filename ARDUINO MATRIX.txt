@@ -27,7 +27,7 @@ void setup() {
   matrix.textScrollSpeed(60);
   matrix.setCallback(matrixCallback);
   
-  const char text[] = " afrah";
+  const char text[] = "LIRISH";
   matrix.beginText(0, 1, 0xFFFFFF);
   matrix.println(text);
   matrix.endTextAnimation(SCROLL_LEFT, anim);
