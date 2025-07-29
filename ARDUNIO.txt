@@ -1,0 +1,80 @@
+#include <WiFiS3.h>
+#include <WiFiSSLClient.h>
+#include <ArduinoHttpClient.h>
+
+// WiFi Credentials
+char ssid[] = "SMART-G";            // 🔁 Replace with your WiFi SSID
+char pass[] = "10112019";       // 🔁 Replace with your WiFi Password
+
+// Firebase Settings
+const char FIREBASE_HOST[] = "test-9695d-default-rtdb.firebaseio.com";
+const int FIREBASE_PORT = 443;
+const String FIREBASE_API_KEY = "awMbQYudxjyZSc2XEh2wzHQ8oQt8mpcQ448A6E59";
+const String FIREBASE_LED_PATH = "/esp32fb/LED";
+
+// LED Pin
+#define LED_PIN 13     // Change to a different pin (e.g., 2 or 8) if using external LED
+
+WiFiSSLClient sslClient;
+HttpClient client(sslClient, FIREBASE_HOST, FIREBASE_PORT);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(LED_PIN, OUTPUT);
+
+  Serial.print("Connecting to WiFi");
+  while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println("\nConnected to WiFi!");
+
+  client.setTimeout(5000);  // Optional: avoid hanging
+}
+
+void loop() {
+  // Reconnect WiFi if needed
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected, reconnecting...");
+    while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
+      delay(500);
+    }
+    Serial.println("Reconnected.");
+  }
+
+  // Build the full Firebase path with .json and API key
+  String fullPath = FIREBASE_LED_PATH + ".json?auth=" + FIREBASE_API_KEY;
+  Serial.print("Sending GET request to: ");
+  Serial.println(fullPath);
+
+  client.get(fullPath);
+  int statusCode = client.responseStatusCode();
+
+  if (statusCode == 200) {
+    String response = client.responseBody();
+    Serial.print("Raw Response: ");
+    Serial.println(response);
+
+    //response.trim();              // Remove leading/trailing whitespace
+    //response.replace("\"", "");   // Remove extra quotes from JSON string
+    response.trim();                         // remove whitespace
+    response.replace("\\", "");              // remove escape backslash
+    response.replace("\"", "");              // remove all quotes
+
+    Serial.print("Cleaned Response: ");
+    Serial.println(response);
+
+    if (response == "on") {
+      digitalWrite(LED_PIN, HIGH);
+      Serial.println("LED ON");
+    } else {
+      digitalWrite(LED_PIN, LOW);
+      Serial.println("LED OFF");
+    }
+  } else {
+    Serial.print("GET failed. Status: ");
+    Serial.println(statusCode);
+  }
+
+  delay(2000);  // Delay between checks
+}
